@@ -489,12 +489,12 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
           </div>
           <div class="field">
             <label for="moveRef">Reference # <span style="color:var(--crimson)">*</span></label>
-            <input id="moveRef" type="text" placeholder="e.g. DR#001, IND#002, WS#001" required>
+            <input id="moveRef" type="text" placeholder="e.g. PO-1042, INV-338, ticket #12" required>
           </div>
           <div class="field">
             <label for="moveQty">Quantity <span style="color:var(--crimson)">*</span></label>
             <div class="qty-row">
-              <input id="moveQty" type="number" min="0.1" step="0.1" placeholder="0.0">
+              <input id="moveQty" type="number" min="0.001" step="0.001" placeholder="0.000">
               <span class="qty-unit" id="moveUnit">kg</span>
             </div>
           </div>
@@ -504,7 +504,7 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
           </div>
           <div class="field">
             <label for="moveBatch">Batch Code / Production Date <span style="color:var(--crimson)">*</span></label>
-            <input id="moveBatch" type="text" placeholder="e.g. G3126 or MM-DD-YYYY" required>
+            <input id="moveBatch" type="text" placeholder="e.g. BC-0731 or 2026-07-31" required>
           </div>
           <div class="field">
             <label for="moveStockman">Stockman In-charge <span style="color:var(--crimson)">*</span></label>
@@ -512,11 +512,11 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
           </div>
           <div class="field">
             <label for="moveLocation">Location <span style="color:var(--crimson)">*</span></label>
-            <input id="moveLocation" type="text" placeholder="e.g. Chiller, Freezer 1, Freezer 2" required>
+            <input id="moveLocation" type="text" placeholder="e.g. Cold Storage 1, Cutting Room" required>
           </div>
           <div class="field">
             <label for="moveNote">Note (optional)</label>
-            <textarea id="moveNote" placeholder="Cutting loss, Shrinkage…"></textarea>
+            <textarea id="moveNote" placeholder="e.g. supplier, order #, ticket ref…"></textarea>
           </div>
           <div class="form-error" id="moveError">Enter a valid quantity.</div>
           <div class="submit-row">
@@ -567,7 +567,7 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
       </div>
       <div class="field">
         <label for="newStock" id="newStockLabel">Starting stock</label>
-        <input id="newStock" type="number" min="0" step="0.1" value="0">
+        <input id="newStock" type="number" min="0" step="0.001" value="0">
       </div>
       <div class="field">
         <label for="newReorder">Reorder level</label>
@@ -629,6 +629,8 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
       { id: uid(), name:'Ground Beef',     category:'beef',    unit:'kg',  stock:34,  reorder:15 },
       { id: uid(), name:'Beef Brisket',    category:'beef',    unit:'kg',  stock:9,   reorder:12 },
       { id: uid(), name:'Pork Belly',      category:'pork',    unit:'kg',  stock:22,  reorder:10 },
+      { id: uid(), name:'Bacon',           category:'pork',    unit:'kg',  stock:14,  reorder:8  },
+      { id: uid(), name:'Sausage Links',   category:'pork',    unit:'kg',  stock:16,  reorder:10 },
       { id: uid(), name:'Chicken Breast',  category:'chicken', unit:'kg',  stock:40,  reorder:20 },
       { id: uid(), name:'Chicken Wings',   category:'chicken', unit:'kg',  stock:6,   reorder:10 },
       { id: uid(), name:'Lamb Chops',      category:'lamb',    unit:'kg',  stock:11,  reorder:8  },
@@ -702,11 +704,11 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
     const outKg = todays.filter(t=>t.type==='out').reduce((s,t)=>s+txKg(t),0);
 
     const cards = [
-      { label:'Total stock on hand', value: fmt(totalKg,1)+' <small>kg</small>' + (totalPcs? ' <small>+ '+fmt(totalPcs,0)+' pcs</small>':''), accent:'var(--gold)' },
-      { label:'Total stock in', value: fmt(allTimeIn,1)+' <small>kg</small>', sub:'+'+fmt(inKg,1)+' kg today', accent:'var(--sage)' },
-      { label:'Total stock out', value: fmt(allTimeOut,1)+' <small>kg</small>', sub:'-'+fmt(outKg,1)+' kg today', accent:'var(--crimson)' },
+      { label:'Total stock on hand', value: fmt(totalKg,3)+' <small>kg</small>' + (totalPcs? ' <small>+ '+fmt(totalPcs,0)+' pcs</small>':''), accent:'var(--gold)' },
+      { label:'Total stock in', value: fmt(allTimeIn,3)+' <small>kg</small>', sub:'+'+fmt(inKg,3)+' kg today', accent:'var(--sage)' },
+      { label:'Total stock out', value: fmt(allTimeOut,3)+' <small>kg</small>', sub:'-'+fmt(outKg,3)+' kg today', accent:'var(--crimson)' },
       { label:'Low stock cuts', value: lowCount, accent: lowCount? 'var(--crimson)':'var(--sage)', warn: lowCount>0, sub: lowCount? 'below reorder level' : 'all cuts stocked' },
-      { label:"Today's movement", value: '+'+fmt(inKg,1)+' / -'+fmt(outKg,1), sub:'kg in / out today', accent:'var(--gold)' },
+      { label:"Today's movement", value: '+'+fmt(inKg,3)+' / -'+fmt(outKg,3), sub:'kg in / out today', accent:'var(--gold)' },
     ];
     document.getElementById('stats').innerHTML = cards.map(c=>`
       <div class="stat-card ${c.warn?'warn':''}" style="--accent:${c.accent}">
@@ -761,10 +763,10 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
             <button class="tag-remove ${confirming?'confirming':''}" data-remove="${item.id}">${confirming? '🔒 confirm?':'✕'}</button>
           </div>
         </div>
-        <div class="tag-stock">${fmt(item.stock,1)} <small>${item.unit}</small></div>
+        <div class="tag-stock">${fmt(item.stock,3)} <small>${item.unit}</small></div>
         <div class="gauge"><div class="gauge-fill ${st}" style="width:${pct}%"></div></div>
         <div class="tag-foot">
-          <span>Reorder at ${fmt(item.reorder,1)} ${item.unit}</span>
+          <span>Reorder at ${fmt(item.reorder,3)} ${item.unit}</span>
           <span class="tag-status ${st}">${st==='low'?'LOW STOCK':st==='watch'?'WATCH':'IN STOCK'}</span>
         </div>
       </div>`;
@@ -787,7 +789,7 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
           <div class="ticket-title">${t.itemName} <span style="color:var(--ink-soft); font-weight:500;">· ${t.ref||'—'}</span></div>
           <div class="ticket-meta">${t.reason} · Batch ${t.batch||'—'} · ${t.stockman||'—'} · ${t.location||'—'}${t.note? ' · '+t.note : ''} · ${timeAgo(t.ts)}</div>
         </div>
-        <div class="ticket-qty ${t.type}">${t.type==='in'?'+':'-'}${fmt(t.qty,1)} ${t.unit}</div>
+        <div class="ticket-qty ${t.type}">${t.type==='in'?'+':'-'}${fmt(t.qty,3)} ${t.unit}</div>
       </div>
     `).join('');
   }
@@ -803,7 +805,7 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
       <div class="chart-row">
         <div class="name">${CAT_LABEL[c]}</div>
         <div class="chart-track"><div class="chart-bar" style="width:${(totals[c]/max*100)}%; background:${CAT_COLOR[c]}"></div></div>
-        <div class="val">${fmt(totals[c],1)} kg</div>
+        <div class="val">${fmt(totals[c],3)} kg</div>
       </div>
     `).join('');
   }
@@ -883,7 +885,7 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
       return;
     }
     if(currentType==='out' && qty>item.stock){
-      errEl.textContent = `Only ${fmt(item.stock,1)} ${item.unit} in stock — can't dispatch that much.`;
+      errEl.textContent = `Only ${fmt(item.stock,3)} ${item.unit} in stock — can't dispatch that much.`;
       errEl.classList.add('show');
       return;
     }
@@ -907,25 +909,27 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
     }
     errEl.classList.remove('show');
 
-    item.stock = currentType==='in' ? item.stock+qty : item.stock-qty;
-    item.stock = Math.round(item.stock*100)/100;
+    requestPin(function(){
+      item.stock = currentType==='in' ? item.stock+qty : item.stock-qty;
+      item.stock = Math.round(item.stock*1000)/1000;
 
-    const tx = { id: uid(), itemId:item.id, itemName:item.name, category:item.category, unit:item.unit, type:currentType, qty, ref, reason, batch, stockman, location, note, ts: Date.now() };
-    state.transactions.unshift(tx);
-    syncAddTransaction(tx, item.stock);
+      const tx = { id: uid(), itemId:item.id, itemName:item.name, category:item.category, unit:item.unit, type:currentType, qty, ref, reason, batch, stockman, location, note, ts: Date.now() };
+      state.transactions.unshift(tx);
+      syncAddTransaction(tx, item.stock);
 
-    document.getElementById('moveQty').value='';
-    document.getElementById('moveRef').value='';
-    document.getElementById('moveBatch').value='';
-    document.getElementById('moveStockman').value='';
-    document.getElementById('moveLocation').value='';
-    document.getElementById('moveNote').value='';
+      document.getElementById('moveQty').value='';
+      document.getElementById('moveRef').value='';
+      document.getElementById('moveBatch').value='';
+      document.getElementById('moveStockman').value='';
+      document.getElementById('moveLocation').value='';
+      document.getElementById('moveNote').value='';
 
-    renderAll();
-    showToast(currentType, (currentType==='in'?'RECEIVED · ':'DISPATCHED · ')+item.name+' '+(currentType==='in'?'+':'-')+fmt(qty,1)+' '+item.unit);
+      renderAll();
+      showToast(currentType, (currentType==='in'?'RECEIVED · ':'DISPATCHED · ')+item.name+' '+(currentType==='in'?'+':'-')+fmt(qty,3)+' '+item.unit);
 
-    const card = document.querySelector(`.tag-card[data-id="${item.id}"]`);
-    if(card){ card.classList.add('flash'); setTimeout(()=>card.classList.remove('flash'), 900); }
+      const card = document.querySelector(`.tag-card[data-id="${item.id}"]`);
+      if(card){ card.classList.add('flash'); setTimeout(()=>card.classList.remove('flash'), 900); }
+    }, 'Record');
   });
 
   // ===== events: search / filter / sort =====
@@ -1028,7 +1032,7 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
     overlay.classList.add('show');
   }
 
-  document.getElementById('openAddItem').addEventListener('click', openAddModal);
+  document.getElementById('openAddItem').addEventListener('click', ()=> requestPin(openAddModal, 'Add Cut'));
   document.getElementById('cancelAddItem').addEventListener('click', ()=> overlay.classList.remove('show'));
   overlay.addEventListener('click', (e)=>{ if(e.target===overlay) overlay.classList.remove('show'); });
 
