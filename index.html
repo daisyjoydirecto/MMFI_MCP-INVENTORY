@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>M. Montesclaros Farms, Inc. — Meat Inventory Ledger</title>
+<title>M. Montesclaros Farms, Inc. — MCP Inventory Ledger</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Work+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
@@ -99,6 +99,28 @@ body{
   opacity: .85;
 }
 .board-meta .sub{ color:#ffffff; font-size:11px; text-transform:uppercase; letter-spacing:1.5px; margin-top:3px;}
+.signed-in-badge{
+  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(124,179,66,.14);
+  border: 1px solid var(--apple-green);
+  border-radius: 3px;
+  padding: 4px 10px;
+  font-size: 11px;
+}
+.signed-in-badge #signedInText{
+  color: var(--apple-green);
+  font-weight: 700;
+  letter-spacing: .3px;
+}
+.signed-in-badge.empty #signedInText{ color: #a89877; font-weight:500; }
+.signed-in-badge.empty{ border-color: #4a3f2e; background: rgba(255,255,255,.03); }
+.signed-in-badge button{
+  background: none; border: none; color: #cfead4; text-decoration: underline;
+  font-size: 10px; padding: 0; cursor: pointer;
+}
 
 /* ===== Stats strip ===== */
 .stats{
@@ -211,6 +233,10 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
   display:grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 14px;
+  max-height: 640px;
+  overflow-y: auto;
+  padding-right: 6px;
+  padding-top: 10px; /* room for the hanging-tag hole so it isn't clipped */
 }
 .tag-card{
   position: relative;
@@ -393,6 +419,17 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
 .modal-actions{ display:flex; gap:8px; margin-top: 6px; }
 .modal-actions button{ flex:1; }
 
+/* ===== Login gate (blocks the dashboard until signed in) ===== */
+.login-gate{
+  position: fixed; inset:0; z-index: 500;
+  background:
+    radial-gradient(1200px 600px at 15% -10%, #23261f 0%, transparent 60%),
+    var(--bg);
+  display:flex; align-items:center; justify-content:center; padding: 16px;
+}
+.login-card{ max-width: 380px; box-shadow: 0 20px 50px rgba(0,0,0,.5); }
+.login-card h2{ color: var(--apple-green); }
+
 /* ===== Toast stamp overlay ===== */
 #stampLayer{ position: fixed; top: 18px; right: 18px; display:flex; flex-direction:column; gap:8px; z-index: 60; pointer-events:none; }
 .toast{
@@ -440,6 +477,10 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
       <div class="board-meta">
         <div id="clock">—</div>
         <div class="sub">Sayre Highway, Valencia City</div>
+        <div class="signed-in-badge" id="signedInBadge">
+          <span id="signedInText">Not signed in</span>
+          <button type="button" id="switchUserBtn" style="display:none;">Switch</button>
+        </div>
       </div>
     </div>
   </header>
@@ -478,6 +519,7 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
     <aside class="side-col">
       <section class="panel movement-panel" style="margin-bottom:18px;">
         <h2>Record movement</h2>
+        <div class="empty-note" id="moveViewOnly" style="display:none;">You're signed in as a Viewer — recording stock movements requires an Administrator or Stockman role.</div>
         <form id="movementForm">
           <div class="type-toggle">
             <button type="button" class="active" data-type="in">↓ Stock In</button>
@@ -485,11 +527,12 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
           </div>
           <div class="field">
             <label for="moveItem">Cut <span style="color:var(--crimson)">*</span></label>
-            <select id="moveItem"></select>
+            <input id="moveItem" type="text" list="cutsList" placeholder="Type to search a cut…" autocomplete="off">
+            <datalist id="cutsList"></datalist>
           </div>
           <div class="field">
             <label for="moveRef">Reference # <span style="color:var(--crimson)">*</span></label>
-            <input id="moveRef" type="text" placeholder="e.g. PO-1042, INV-338, ticket #12" required>
+            <input id="moveRef" type="text" placeholder="e.g. Receive Date, DR#0001, INDR#0001" required>
           </div>
           <div class="field">
             <label for="moveQty">Quantity <span style="color:var(--crimson)">*</span></label>
@@ -504,7 +547,7 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
           </div>
           <div class="field">
             <label for="moveBatch">Batch Code / Production Date <span style="color:var(--crimson)">*</span></label>
-            <input id="moveBatch" type="text" placeholder="e.g. BC-0731 or 2026-07-31" required>
+            <input id="moveBatch" type="text" placeholder="e.g. A0126 or 2026-07-31" required>
           </div>
           <div class="field">
             <label for="moveStockman">Stockman In-charge <span style="color:var(--crimson)">*</span></label>
@@ -512,11 +555,11 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
           </div>
           <div class="field">
             <label for="moveLocation">Location <span style="color:var(--crimson)">*</span></label>
-            <input id="moveLocation" type="text" placeholder="e.g. Cold Storage 1, Cutting Room" required>
+            <input id="moveLocation" type="text" placeholder="e.g. Freezer 1, Container Van 1, Chiller" required>
           </div>
           <div class="field">
             <label for="moveNote">Note (optional)</label>
-            <textarea id="moveNote" placeholder="e.g. supplier, order #, ticket ref…"></textarea>
+            <textarea id="moveNote" placeholder="e.g. Tattoo #, Customer Purchase Order #, and etc…"></textarea>
           </div>
           <div class="form-error" id="moveError">Enter a valid quantity.</div>
           <div class="submit-row">
@@ -546,7 +589,7 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
       <input type="hidden" id="editItemId" value="">
       <div class="field">
         <label for="newName">Name</label>
-        <input id="newName" type="text" placeholder="e.g. Flank Steak" required>
+        <input id="newName" type="text" placeholder="e.g. Shoulder SOBI" required>
       </div>
       <div class="field">
         <label for="newCategory">Category</label>
@@ -561,7 +604,7 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
         <label for="newUnit">Unit</label>
         <select id="newUnit">
           <option value="kg">Kilograms (kg)</option>
-          <option value="lb">Pounds (lb)</option>
+          <option value="hds">Heads (hds)</option>
           <option value="pcs">Pieces (pcs)</option>
         </select>
       </div>
@@ -570,7 +613,7 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
         <input id="newStock" type="number" min="0" step="0.001" value="0">
       </div>
       <div class="field">
-        <label for="newReorder">Reorder level</label>
+        <label for="newReorder">Replenishment level</label>
         <input id="newReorder" type="number" min="0" step="0.1" value="5">
       </div>
       <div class="modal-actions">
@@ -581,19 +624,34 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
   </div>
 </div>
 
-<div class="modal-overlay" id="pinOverlay">
-  <div class="modal" style="max-width:320px;">
-    <h2>🔒 Manager PIN</h2>
-    <p style="font-size:12px; color:var(--ink-soft); margin:-8px 0 14px; line-height:1.5;">Editing or deleting a cut requires the manager PIN.</p>
-    <form id="pinForm">
+<div class="login-gate" id="loginGate">
+  <div class="modal login-card">
+    <h2>M. Montesclaros Farms, Inc.</h2>
+    <p style="font-size:12px; color:var(--ink-soft); margin:-6px 0 16px; line-height:1.5;">Sign in to access the MMFI-MCP inventory dashboard.</p>
+    <form id="loginForm">
       <div class="field">
-        <label for="pinInput">PIN</label>
-        <input id="pinInput" type="password" inputmode="numeric" autocomplete="off" placeholder="••••">
+        <label for="loginRole">Role <span style="color:var(--crimson)">*</span></label>
+        <select id="loginRole">
+          <option value="administrator">Administrator</option>
+          <option value="stockman">Stockman</option>
+          <option value="viewer">Viewer (view only)</option>
+        </select>
       </div>
-      <div class="form-error" id="pinError">Incorrect PIN — try again.</div>
-      <div class="modal-actions">
-        <button type="button" class="ghost" id="pinCancel">Cancel</button>
-        <button type="submit" id="pinSubmitBtn">Unlock</button>
+      <div class="field" id="loginNameTextWrap">
+        <label for="loginName">Your Name <span style="color:var(--crimson)">*</span></label>
+        <input id="loginName" type="text" autocomplete="off" placeholder="Full name" required>
+      </div>
+      <div class="field" id="loginNameStockmanWrap" style="display:none;">
+        <label for="loginNameStockman">Stockman <span style="color:var(--crimson)">*</span></label>
+        <select id="loginNameStockman"></select>
+      </div>
+      <div class="field">
+        <label for="loginPin">PIN <span style="color:var(--crimson)">*</span></label>
+        <input id="loginPin" type="password" inputmode="numeric" autocomplete="off" placeholder="••••" required>
+      </div>
+      <div class="form-error" id="loginError">Incorrect PIN — try again.</div>
+      <div class="submit-row">
+        <button type="submit">Sign In</button>
       </div>
     </form>
   </div>
@@ -603,8 +661,17 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
 
 <script>
 (function(){
-  // Manager PIN — required to edit or delete a cut. Change this to your own PIN.
-  const MANAGER_PIN = '1234';
+  // Sign-in PINs — one per role. Change these to your own PINs.
+  const PIN_BY_ROLE = {
+    administrator: '2026',
+    viewer: '0000'
+  };
+  // Named stockman accounts — add more entries here for more stockmen.
+  const STOCKMAN_USERS = [
+    { name: 'JOBERT JUMAWAN', pin: '0806' },
+    { name: 'EVINE JAKE APEROCHO', pin: '5418' },
+    { name: 'RODOLFO ORONGAN', pin: '8765' },
+  ];
 
   // Google Sheet database config — see the sync section further down for the Apps Script.
   const SHEET_ID = '1079P0I4rPVycWaDbWUawSlHlRpKTr4vu9Ix26sbdh5M';
@@ -623,40 +690,7 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
   function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
   function hoursAgo(h){ return Date.now() - h*3600*1000; }
 
-  let state = sheetConfigured() ? { items: [], transactions: [] } : {
-    items: [
-      { id: uid(), name:'Ribeye Steak',    category:'beef',    unit:'kg',  stock:18,  reorder:10 },
-      { id: uid(), name:'Ground Beef',     category:'beef',    unit:'kg',  stock:34,  reorder:15 },
-      { id: uid(), name:'Beef Brisket',    category:'beef',    unit:'kg',  stock:9,   reorder:12 },
-      { id: uid(), name:'Pork Belly',      category:'pork',    unit:'kg',  stock:22,  reorder:10 },
-      { id: uid(), name:'Bacon',           category:'pork',    unit:'kg',  stock:14,  reorder:8  },
-      { id: uid(), name:'Sausage Links',   category:'pork',    unit:'kg',  stock:16,  reorder:10 },
-      { id: uid(), name:'Chicken Breast',  category:'chicken', unit:'kg',  stock:40,  reorder:20 },
-      { id: uid(), name:'Chicken Wings',   category:'chicken', unit:'kg',  stock:6,   reorder:10 },
-      { id: uid(), name:'Lamb Chops',      category:'lamb',    unit:'kg',  stock:11,  reorder:8  },
-    ],
-    transactions: []
-  };
-
-  // seed some history — only for the offline/demo fallback, never when a sheet is connected
-  if(!sheetConfigured()){
-  (function seedHistory(){
-    const seeds = [
-      { name:'Ribeye Steak', type:'in',  qty:12, reason:'Production Yield', ref:'PO-1041', batch:'BC-0619', stockman:'R. Delos Santos', location:'Cold Storage 1', ts: hoursAgo(46) },
-      { name:'Chicken Breast', type:'out', qty:15, reason:'Sold', ref:'INV-2207', batch:'BC-0620', stockman:'J. Cabrera', location:'Cutting Room', ts: hoursAgo(30) },
-      { name:'Beef Brisket', type:'out', qty:6, reason:'Consumption', ref:'KIT-0912', batch:'BC-0621', stockman:'J. Cabrera', location:'Cutting Room', ts: hoursAgo(20) },
-      { name:'Pork Belly', type:'in', qty:5, reason:'Transfer from other cold storage', ref:'PO-1042', batch:'BC-0622', stockman:'R. Delos Santos', location:'Cold Storage 2', ts: hoursAgo(9) },
-      { name:'Chicken Wings', type:'out', qty:9, reason:'Sold', ref:'INV-2211', batch:'BC-0623', stockman:'M. Villareal', location:'Cold Storage 1', ts: hoursAgo(4) },
-      { name:'Ground Beef', type:'out', qty:7, reason:'Sold', ref:'INV-2213', batch:'BC-0624', stockman:'M. Villareal', location:'Cold Storage 1', ts: hoursAgo(1.2) },
-      { name:'Bacon', type:'in', qty:6, reason:'Production Yield', ref:'PO-1044', batch:'BC-0625', stockman:'R. Delos Santos', location:'Cold Storage 2', ts: hoursAgo(0.4) },
-    ];
-    seeds.forEach(s=>{
-      const item = state.items.find(i=>i.name===s.name);
-      if(item){ state.transactions.push({ id: uid(), itemId:item.id, itemName:item.name, category:item.category, unit:item.unit, type:s.type, qty:s.qty, reason:s.reason, ref:s.ref, batch:s.batch, stockman:s.stockman, location:s.location, note:'', ts:s.ts }); }
-    });
-    state.transactions.sort((a,b)=>b.ts-a.ts);
-  })();
-  }
+  let state = { items: [], transactions: [] };
 
   let currentType = 'in';
   let removeConfirmId = null;
@@ -664,7 +698,7 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
   // ===== helpers =====
   function weightKg(item){
     if(item.unit==='kg') return item.stock;
-    if(item.unit==='lb') return item.stock*0.453592;
+    if(item.unit==='hds') return item.stock*0.453592;
     return 0;
   }
   function status(item){
@@ -688,7 +722,7 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
   }
 
   // ===== render: stats =====
-  function txKg(t){ return t.unit==='pcs' ? 0 : t.unit==='lb' ? t.qty*0.453592 : t.qty; }
+  function txKg(t){ return t.unit==='pcs' ? 0 : t.unit==='hds' ? t.qty*0.453592 : t.qty; }
 
   function renderStats(){
     const totalKg = state.items.reduce((s,i)=>s+weightKg(i),0);
@@ -758,10 +792,11 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
             <span class="tag-cat" style="--cat-color:${CAT_COLOR[item.category]}">${CAT_LABEL[item.category]}</span>
             <h3 class="tag-name">${item.name}</h3>
           </div>
+          ${canEdit() ? `
           <div class="tag-actions">
-            <button class="tag-edit" data-edit="${item.id}">🔒 Edit</button>
-            <button class="tag-remove ${confirming?'confirming':''}" data-remove="${item.id}">${confirming? '🔒 confirm?':'✕'}</button>
-          </div>
+            <button class="tag-edit" data-edit="${item.id}">Edit</button>
+            <button class="tag-remove ${confirming?'confirming':''}" data-remove="${item.id}">${confirming? 'confirm?':'✕'}</button>
+          </div>` : ''}
         </div>
         <div class="tag-stock">${fmt(item.stock,3)} <small>${item.unit}</small></div>
         <div class="gauge"><div class="gauge-fill ${st}" style="width:${pct}%"></div></div>
@@ -787,7 +822,7 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
         <div class="stamp ${t.type}">${t.type==='in'?'RECEIVED':'DISPATCH'}</div>
         <div class="ticket-body">
           <div class="ticket-title">${t.itemName} <span style="color:var(--ink-soft); font-weight:500;">· ${t.ref||'—'}</span></div>
-          <div class="ticket-meta">${t.reason} · Batch ${t.batch||'—'} · ${t.stockman||'—'} · ${t.location||'—'}${t.note? ' · '+t.note : ''} · ${timeAgo(t.ts)}</div>
+          <div class="ticket-meta">${t.reason} · Batch ${t.batch||'—'} · ${t.stockman||'—'} · ${t.location||'—'} · logged by ${t.loggedInUser||'—'}${t.note? ' · '+t.note : ''} · ${timeAgo(t.ts)}</div>
         </div>
         <div class="ticket-qty ${t.type}">${t.type==='in'?'+':'-'}${fmt(t.qty,3)} ${t.unit}</div>
       </div>
@@ -812,17 +847,18 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
 
   // ===== movement form population =====
   function populateMoveItemSelect(){
-    const sel = document.getElementById('moveItem');
-    const prev = sel.value;
-    sel.innerHTML = state.items.map(i=>`<option value="${i.id}">${i.name}</option>`).join('');
-    if(prev && state.items.some(i=>i.id===prev)) sel.value = prev;
+    const list = document.getElementById('cutsList');
+    list.innerHTML = state.items.map(i=>`<option value="${i.name}"></option>`).join('');
     updateMoveUnit();
     populateReasons();
   }
+  function findItemByTypedName(text){
+    const t = text.trim().toLowerCase();
+    return state.items.find(i=>i.name.toLowerCase()===t);
+  }
   function updateMoveUnit(){
-    const sel = document.getElementById('moveItem');
-    const item = state.items.find(i=>i.id===sel.value);
-    document.getElementById('moveUnit').textContent = item? item.unit : '';
+    const item = findItemByTypedName(document.getElementById('moveItem').value);
+    document.getElementById('moveUnit').textContent = item ? item.unit : '';
   }
   function populateReasons(){
     const reasonSel = document.getElementById('moveReason');
@@ -857,12 +893,13 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
     });
   });
 
-  document.getElementById('moveItem').addEventListener('change', updateMoveUnit);
+  document.getElementById('moveItem').addEventListener('input', updateMoveUnit);
 
   // ===== events: movement submit =====
   document.getElementById('movementForm').addEventListener('submit', function(e){
     e.preventDefault();
-    const itemId = document.getElementById('moveItem').value;
+    if(!canEdit()) return; // safety net — form is hidden for view-only roles anyway
+    const itemText = document.getElementById('moveItem').value;
     const qty = parseFloat(document.getElementById('moveQty').value);
     const ref = document.getElementById('moveRef').value.trim();
     const reason = document.getElementById('moveReason').value;
@@ -871,8 +908,14 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
     const location = document.getElementById('moveLocation').value.trim();
     const note = document.getElementById('moveNote').value.trim();
     const errEl = document.getElementById('moveError');
-    const item = state.items.find(i=>i.id===itemId);
+    const item = findItemByTypedName(itemText);
 
+    if(!item){
+      errEl.textContent = 'Select a valid cut from the search results.';
+      errEl.classList.add('show');
+      document.getElementById('moveItem').focus();
+      return;
+    }
     if(!ref){
       errEl.textContent = 'Reference # is required.';
       errEl.classList.add('show');
@@ -909,27 +952,26 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
     }
     errEl.classList.remove('show');
 
-    requestPin(function(){
-      item.stock = currentType==='in' ? item.stock+qty : item.stock-qty;
-      item.stock = Math.round(item.stock*1000)/1000;
+    const user = currentUser.name;
+    item.stock = currentType==='in' ? item.stock+qty : item.stock-qty;
+    item.stock = Math.round(item.stock*1000)/1000;
 
-      const tx = { id: uid(), itemId:item.id, itemName:item.name, category:item.category, unit:item.unit, type:currentType, qty, ref, reason, batch, stockman, location, note, ts: Date.now() };
-      state.transactions.unshift(tx);
-      syncAddTransaction(tx, item.stock);
+    const tx = { id: uid(), itemId:item.id, itemName:item.name, category:item.category, unit:item.unit, type:currentType, qty, ref, reason, batch, stockman, location, loggedInUser:user, note, ts: Date.now() };
+    state.transactions.unshift(tx);
+    syncAddTransaction(tx, item.stock, user);
 
-      document.getElementById('moveQty').value='';
-      document.getElementById('moveRef').value='';
-      document.getElementById('moveBatch').value='';
-      document.getElementById('moveStockman').value='';
-      document.getElementById('moveLocation').value='';
-      document.getElementById('moveNote').value='';
+    document.getElementById('moveQty').value='';
+    document.getElementById('moveRef').value='';
+    document.getElementById('moveBatch').value='';
+    document.getElementById('moveStockman').value='';
+    document.getElementById('moveLocation').value='';
+    document.getElementById('moveNote').value='';
 
-      renderAll();
-      showToast(currentType, (currentType==='in'?'RECEIVED · ':'DISPATCHED · ')+item.name+' '+(currentType==='in'?'+':'-')+fmt(qty,3)+' '+item.unit);
+    renderAll();
+    showToast(currentType, (currentType==='in'?'RECEIVED · ':'DISPATCHED · ')+item.name+' '+(currentType==='in'?'+':'-')+fmt(qty,3)+' '+item.unit+' · confirmed by '+user);
 
-      const card = document.querySelector(`.tag-card[data-id="${item.id}"]`);
-      if(card){ card.classList.add('flash'); setTimeout(()=>card.classList.remove('flash'), 900); }
-    }, 'Record');
+    const card = document.querySelector(`.tag-card[data-id="${item.id}"]`);
+    if(card){ card.classList.add('flash'); setTimeout(()=>card.classList.remove('flash'), 900); }
   });
 
   // ===== events: search / filter / sort =====
@@ -937,65 +979,109 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
   document.getElementById('categoryFilter').addEventListener('change', renderTagGrid);
   document.getElementById('sortBy').addEventListener('change', renderTagGrid);
 
-  // ===== PIN gate for edit / delete =====
-  const pinOverlay = document.getElementById('pinOverlay');
-  let pinCallback = null;
-  function requestPin(callback, label){
-    pinCallback = callback;
-    document.getElementById('pinInput').value = '';
-    document.getElementById('pinError').classList.remove('show');
-    const submitBtn = document.getElementById('pinSubmitBtn');
-    submitBtn.textContent = label || 'Unlock';
-    if(label === 'Delete'){
-      submitBtn.style.background = 'var(--crimson)';
-      submitBtn.style.borderColor = 'var(--crimson)';
+  // ===== Login gate + role-based permissions =====
+  const ROLE_LABEL = { administrator:'Administrator', stockman:'Stockman', viewer:'Viewer' };
+  const EDIT_ROLES = ['administrator','stockman'];
+  let currentUser = { name:'', role:'' };
+  function canEdit(){ return EDIT_ROLES.includes(currentUser.role); }
+
+  function updateSignedInBadge(){
+    const badge = document.getElementById('signedInBadge');
+    const text = document.getElementById('signedInText');
+    const switchBtn = document.getElementById('switchUserBtn');
+    if(currentUser.name){
+      badge.classList.remove('empty');
+      text.textContent = 'Signed in as ' + currentUser.name + ' (' + ROLE_LABEL[currentUser.role] + ')';
+      switchBtn.style.display = 'inline';
     } else {
-      submitBtn.style.background = '';
-      submitBtn.style.borderColor = '';
+      badge.classList.add('empty');
+      text.textContent = 'Not signed in';
+      switchBtn.style.display = 'none';
     }
-    pinOverlay.classList.add('show');
-    setTimeout(()=>document.getElementById('pinInput').focus(), 60);
   }
-  document.getElementById('pinCancel').addEventListener('click', ()=>{
-    pinOverlay.classList.remove('show');
-    pinCallback = null;
-    removeConfirmId = null;
-    renderTagGrid();
-  });
-  pinOverlay.addEventListener('click', (e)=>{ if(e.target===pinOverlay){ pinOverlay.classList.remove('show'); pinCallback=null; } });
-  document.getElementById('pinForm').addEventListener('submit', function(e){
-    e.preventDefault();
-    const val = document.getElementById('pinInput').value.trim();
-    if(val === MANAGER_PIN){
-      pinOverlay.classList.remove('show');
-      const cb = pinCallback; pinCallback = null;
-      if(cb) cb();
+
+  function applyRolePermissions(){
+    const editAllowed = canEdit();
+    document.getElementById('openAddItem').style.display = editAllowed ? '' : 'none';
+    const moveForm = document.getElementById('movementForm');
+    const moveViewOnly = document.getElementById('moveViewOnly');
+    if(editAllowed){
+      moveForm.style.display = '';
+      moveViewOnly.style.display = 'none';
     } else {
-      document.getElementById('pinError').classList.add('show');
-      document.getElementById('pinInput').value = '';
-      document.getElementById('pinInput').focus();
+      moveForm.style.display = 'none';
+      moveViewOnly.style.display = 'block';
     }
+    renderTagGrid(); // edit/delete buttons on cards are only added when canEdit() is true
+  }
+
+  document.getElementById('switchUserBtn').addEventListener('click', ()=>{
+    currentUser = { name:'', role:'' };
+    updateSignedInBadge();
+    document.getElementById('loginPin').value = '';
+    document.getElementById('loginGate').style.display = 'flex';
+    setTimeout(()=>document.getElementById('loginName').focus(), 60);
   });
 
-  // ===== events: edit / remove item (PIN protected) =====
+  // Populate the stockman name dropdown and toggle which name field shows per role
+  const stockmanSelect = document.getElementById('loginNameStockman');
+  stockmanSelect.innerHTML = STOCKMAN_USERS.map(u=>`<option value="${u.name}">${u.name}</option>`).join('');
+  document.getElementById('loginRole').addEventListener('change', function(){
+    const isStockman = this.value === 'stockman';
+    document.getElementById('loginNameTextWrap').style.display = isStockman ? 'none' : '';
+    document.getElementById('loginNameStockmanWrap').style.display = isStockman ? '' : 'none';
+    document.getElementById('loginName').required = !isStockman;
+  });
+
+  document.getElementById('loginForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    const role = document.getElementById('loginRole').value;
+    const pin = document.getElementById('loginPin').value.trim();
+    const errEl = document.getElementById('loginError');
+    let name, pinOk;
+
+    if(role === 'stockman'){
+      name = stockmanSelect.value;
+      const match = STOCKMAN_USERS.find(u=>u.name===name);
+      pinOk = !!match && pin === match.pin;
+    } else {
+      name = document.getElementById('loginName').value.trim();
+      pinOk = pin === PIN_BY_ROLE[role];
+    }
+
+    if(!pinOk){
+      errEl.textContent = 'Incorrect PIN for that user — try again.';
+      errEl.classList.add('show');
+      document.getElementById('loginPin').value = '';
+      document.getElementById('loginPin').focus();
+      return;
+    }
+    errEl.classList.remove('show');
+    currentUser = { name, role };
+    document.getElementById('loginGate').style.display = 'none';
+    updateSignedInBadge();
+    applyRolePermissions();
+  });
+
+  // ===== events: edit / remove item (role protected) =====
   document.getElementById('tagGrid').addEventListener('click', function(e){
+    if(!canEdit()) return; // safety net — buttons aren't rendered for view-only roles anyway
     const editBtn = e.target.closest('[data-edit]');
     if(editBtn){
-      requestPin(()=> openEditModal(editBtn.dataset.edit), 'Edit');
+      openEditModal(editBtn.dataset.edit);
       return;
     }
     const btn = e.target.closest('[data-remove]');
     if(!btn) return;
     const id = btn.dataset.remove;
     if(removeConfirmId===id){
-      requestPin(()=>{
-        state.items = state.items.filter(i=>i.id!==id);
-        state.transactions = state.transactions.filter(t=>t.itemId!==id);
-        removeConfirmId = null;
-        renderAll();
-        showToast('out', 'CUT DELETED');
-        syncDeleteItem(id);
-      }, 'Delete');
+      const deletedItem = state.items.find(i=>i.id===id);
+      state.items = state.items.filter(i=>i.id!==id);
+      state.transactions = state.transactions.filter(t=>t.itemId!==id);
+      removeConfirmId = null;
+      renderAll();
+      showToast('out', 'CUT DELETED · by '+currentUser.name);
+      syncDeleteItem(id, currentUser.name, deletedItem ? deletedItem.name : '');
     } else {
       removeConfirmId = id;
       renderTagGrid();
@@ -1032,7 +1118,7 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
     overlay.classList.add('show');
   }
 
-  document.getElementById('openAddItem').addEventListener('click', ()=> requestPin(openAddModal, 'Add Cut'));
+  document.getElementById('openAddItem').addEventListener('click', ()=>{ if(canEdit()) openAddModal(); });
   document.getElementById('cancelAddItem').addEventListener('click', ()=> overlay.classList.remove('show'));
   overlay.addEventListener('click', (e)=>{ if(e.target===overlay) overlay.classList.remove('show'); });
 
@@ -1045,6 +1131,7 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
     const unit = document.getElementById('newUnit').value;
     const stock = parseFloat(document.getElementById('newStock').value)||0;
     const reorder = parseFloat(document.getElementById('newReorder').value)||0;
+    const user = currentUser.name;
 
     if(editId){
       const item = state.items.find(i=>i.id===editId);
@@ -1053,8 +1140,8 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
         item.stock = stock; item.reorder = reorder;
         overlay.classList.remove('show');
         renderAll();
-        showToast('in', 'CUT UPDATED · '+item.name);
-        syncUpdateItem(item);
+        showToast('in', 'CUT UPDATED · '+item.name+' · by '+user);
+        syncUpdateItem(item, user);
       }
       return;
     }
@@ -1064,19 +1151,19 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
     this.reset();
     overlay.classList.remove('show');
     renderAll();
-    showToast('in', 'NEW CUT ADDED · '+item.name);
-    syncAddItem(item);
+    showToast('in', 'NEW CUT ADDED · '+item.name+' · by '+user);
+    syncAddItem(item, user);
   });
 
   // ===== CSV export =====
   function toCSV(){
-    const rows = [['Date','Time','Reference #','Item','Category','Type','Quantity','Unit','Reason','Batch Code / Production Date','Stockman In-charge','Location','Note']];
+    const rows = [['Date','Time','Reference #','Item','Category','Type','Quantity','Unit','Reason','Batch Code / Production Date','Stockman In-charge','Location','Logged In User','Note']];
     state.transactions.slice().sort((a,b)=>a.ts-b.ts).forEach(t=>{
       const d = new Date(t.ts);
       rows.push([
         d.toLocaleDateString(), d.toLocaleTimeString(), t.ref||'',
         t.itemName, CAT_LABEL[t.category]||t.category, t.type==='in'?'In':'Out',
-        t.qty, t.unit, t.reason, t.batch||'', t.stockman||'', t.location||'', t.note||''
+        t.qty, t.unit, t.reason, t.batch||'', t.stockman||'', t.location||'', t.loggedInUser||'', t.note||''
       ]);
     });
     return rows.map(r=>r.map(v=>{
@@ -1117,9 +1204,11 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
   const SHEET_ID = '1079P0I4rPVycWaDbWUawSlHlRpKTr4vu9Ix26sbdh5M';
   const ITEMS_TAB = 'Items';
   const ACTIVITY_TAB = 'Activity';
+  const AUDIT_TAB = 'AuditLog';
 
   const ITEMS_HEADER_ROWS = 2;      // Items: row1 title, row2 headers, data from row 3
   const ACTIVITY_HEADER_ROWS = 3;   // Activity: row1 company, row2 subtitle, row3 headers, data from row 4
+  const AUDIT_HEADER_ROWS = 2;      // AuditLog: row1 title, row2 headers, data from row 3
 
   function getSS(){ return SpreadsheetApp.openById(SHEET_ID); }
 
@@ -1148,7 +1237,12 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
     }
   }
   function itemsSheet(){ return getTab(ITEMS_TAB, ['ID','Name','Category','Unit','Stock','Reorder'], ['ITEMS']); }
-  function activitySheet(){ return getTab(ACTIVITY_TAB, ['ID','Date','Reference #','Item ID','Item','Category','Type','Quantity','Unit','Reason','Batch Code / Production Date','Stockman In-charge','Note','Location'], ['M. MONTESCLAROS FARMS, INC. - SAYRE HIGHWAY', 'MEAT CUTTING PLANT INVENTORY AND ACTIVITY LOG']); }
+  function activitySheet(){ return getTab(ACTIVITY_TAB, ['ID','Date','Reference #','Item ID','Item','Category','Type','Quantity','Unit','Reason','Batch Code / Production Date','Stockman In-charge','Note','Location','Logged In User'], ['M. MONTESCLAROS FARMS, INC. - SAYRE HIGHWAY', 'MEAT CUTTING PLANT INVENTORY AND ACTIVITY LOG']); }
+  function auditSheet(){ return getTab(AUDIT_TAB, ['Timestamp','User','Action','Item','Details'], ['AUDIT LOG — who changed what']); }
+
+  function logAudit(user, action, itemName, details){
+    auditSheet().appendRow([new Date(), user || 'Unknown', action, itemName || '', details || '']);
+  }
 
   function rowsToObjects(sh, keys, headerRows){
     var data = sh.getDataRange().getValues();
@@ -1171,46 +1265,56 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
 
   function doGet(e){
     var items = rowsToObjects(itemsSheet(), ['id','name','category','unit','stock','reorder'], ITEMS_HEADER_ROWS);
-    var raw = rowsToObjects(activitySheet(), ['id','ts','ref','itemId','itemName','category','type','qty','unit','reason','batch','stockman','note','location'], ACTIVITY_HEADER_ROWS);
+    var raw = rowsToObjects(activitySheet(), ['id','ts','ref','itemId','itemName','category','type','qty','unit','reason','batch','stockman','note','location','loggedInUser'], ACTIVITY_HEADER_ROWS);
     var transactions = raw.map(function(t){
       var d = t.ts instanceof Date ? t.ts.getTime() : new Date(t.ts).getTime();
       return Object.assign({}, t, { ts: d });
     });
-    return out({ status:'ok', items: items, transactions: transactions });
+    var auditRaw = rowsToObjects(auditSheet(), ['ts','user','action','item','details'], AUDIT_HEADER_ROWS);
+    var audit = auditRaw.map(function(a){
+      var d = a.ts instanceof Date ? a.ts.getTime() : new Date(a.ts).getTime();
+      return Object.assign({}, a, { ts: d });
+    });
+    return out({ status:'ok', items: items, transactions: transactions, audit: audit });
   }
 
   function doPost(e){
     var body = JSON.parse(e.postData.contents);
-    if (body.action === 'addItem')        return addItem(body.item);
-    if (body.action === 'updateItem')     return updateItem(body.item);
-    if (body.action === 'deleteItem')     return deleteItem(body.id);
-    if (body.action === 'addTransaction') return addTransaction(body.tx, body.newStock);
+    if (body.action === 'addItem')        return addItem(body.item, body.user);
+    if (body.action === 'updateItem')     return updateItem(body.item, body.user);
+    if (body.action === 'deleteItem')     return deleteItem(body.id, body.user, body.itemName);
+    if (body.action === 'addTransaction') return addTransaction(body.tx, body.newStock, body.user);
     return out({ status:'error', message:'Unknown action' });
   }
 
-  function addItem(item){
+  function addItem(item, user){
     itemsSheet().appendRow([item.id, item.name, item.category, item.unit, item.stock, item.reorder]);
+    logAudit(user, 'Add Cut', item.name, 'Category: '+item.category+', Starting stock: '+item.stock+' '+item.unit+', Reorder: '+item.reorder);
     return out({ status:'ok' });
   }
-  function updateItem(item){
+  function updateItem(item, user){
     var sh = itemsSheet();
     var row = findRowById(sh, item.id, ITEMS_HEADER_ROWS);
     if (row > 0) sh.getRange(row, 1, 1, 6).setValues([[item.id, item.name, item.category, item.unit, item.stock, item.reorder]]);
+    logAudit(user, 'Edit Cut', item.name, 'Category: '+item.category+', Stock: '+item.stock+' '+item.unit+', Reorder: '+item.reorder);
     return out({ status:'ok' });
   }
-  function deleteItem(id){
+  function deleteItem(id, user, itemName){
     var sh = itemsSheet();
     var row = findRowById(sh, id, ITEMS_HEADER_ROWS);
     if (row > 0) sh.deleteRow(row);
+    logAudit(user, 'Delete Cut', itemName, 'Item ID: '+id);
     return out({ status:'ok' });
   }
-  function addTransaction(tx, newStock){
-    activitySheet().appendRow([tx.id, new Date(tx.ts), tx.ref, tx.itemId, tx.itemName, tx.category, tx.type, tx.qty, tx.unit, tx.reason, tx.batch, tx.stockman, tx.note || '', tx.location || '']);
+  function addTransaction(tx, newStock, user){
+    activitySheet().appendRow([tx.id, new Date(tx.ts), tx.ref, tx.itemId, tx.itemName, tx.category, tx.type, tx.qty, tx.unit, tx.reason, tx.batch, tx.stockman, tx.note || '', tx.location || '', user || '']);
     if (newStock !== undefined && tx.itemId){
       var sh = itemsSheet();
       var row = findRowById(sh, tx.itemId, ITEMS_HEADER_ROWS);
       if (row > 0) sh.getRange(row, 5).setValue(newStock);
     }
+    logAudit(user, tx.type === 'in' ? 'Stock In' : 'Stock Out', tx.itemName,
+      tx.qty + ' ' + tx.unit + ' · Ref ' + tx.ref + ' · ' + tx.reason + ' · Stockman: ' + tx.stockman + ' · Location: ' + tx.location);
     return out({ status:'ok' });
   }
   function out(obj){
@@ -1243,7 +1347,7 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
           state.transactions = (data.transactions||[]).map(t=>({
             id: String(t.id), itemId: String(t.itemId), itemName: t.itemName, category: t.category,
             unit: t.unit, type: t.type, qty: Number(t.qty)||0, ref: t.ref, reason: t.reason,
-            batch: t.batch, stockman: t.stockman, location: t.location, note: t.note||'', ts: Number(t.ts)||Date.now()
+            batch: t.batch, stockman: t.stockman, location: t.location, loggedInUser: t.loggedInUser, note: t.note||'', ts: Number(t.ts)||Date.now()
           })).sort((a,b)=>b.ts-a.ts);
           loading = false;
           renderAll();
@@ -1274,10 +1378,10 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
       .catch(()=>{ showToast('out', 'Could not reach Google Sheet — check the sync connection'); });
   }
 
-  function syncAddItem(item){ sheetPost({ action:'addItem', item }); }
-  function syncUpdateItem(item){ sheetPost({ action:'updateItem', item }); }
-  function syncDeleteItem(id){ sheetPost({ action:'deleteItem', id }); }
-  function syncAddTransaction(tx, newStock){ sheetPost({ action:'addTransaction', tx, newStock }); }
+  function syncAddItem(item, user){ sheetPost({ action:'addItem', item, user }); }
+  function syncUpdateItem(item, user){ sheetPost({ action:'updateItem', item, user }); }
+  function syncDeleteItem(id, user, itemName){ sheetPost({ action:'deleteItem', id, user, itemName }); }
+  function syncAddTransaction(tx, newStock, user){ sheetPost({ action:'addTransaction', tx, newStock, user }); }
 
   if(sheetConfigured()){
     loadFromSheet();
@@ -1294,6 +1398,9 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
   }
   tickClock();
   setInterval(tickClock, 30000);
+
+  updateSignedInBadge();
+  setTimeout(()=>document.getElementById('loginName').focus(), 100);
 
   renderAll();
 })();
