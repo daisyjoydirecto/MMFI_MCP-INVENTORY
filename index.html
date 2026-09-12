@@ -705,10 +705,11 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
         <label for="loginNameStockman">Stockman <span style="color:var(--crimson)">*</span></label>
         <select id="loginNameStockman"></select>
       </div>
-      <div class="field">
+      <div class="field" id="loginPinWrap">
         <label for="loginPin">PIN <span style="color:var(--crimson)">*</span></label>
         <input id="loginPin" type="password" inputmode="numeric" autocomplete="off" placeholder="••••" required>
       </div>
+      <p id="loginViewerNote" style="display:none; font-size:12px; color:var(--ink-soft); margin:-4px 0 12px;">No name or PIN needed for viewing — just click Sign In.</p>
       <div class="form-error" id="loginError">Incorrect PIN — try again.</div>
       <div class="submit-row">
         <button type="submit">Sign In</button>
@@ -723,8 +724,7 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
 (function(){
   // Sign-in PINs — one per role. Change these to your own PINs.
   const PIN_BY_ROLE = {
-    administrator: '2026',
-    viewer: '0000'
+    administrator: '1234'
   };
   // Named stockman accounts — add more entries here for more stockmen.
   const STOCKMAN_USERS = [
@@ -1175,9 +1175,13 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
   stockmanSelect.innerHTML = STOCKMAN_USERS.map(u=>`<option value="${u.name}">${u.name}</option>`).join('');
   document.getElementById('loginRole').addEventListener('change', function(){
     const isStockman = this.value === 'stockman';
-    document.getElementById('loginNameTextWrap').style.display = isStockman ? 'none' : '';
+    const isViewer = this.value === 'viewer';
+    document.getElementById('loginNameTextWrap').style.display = (isStockman || isViewer) ? 'none' : '';
     document.getElementById('loginNameStockmanWrap').style.display = isStockman ? '' : 'none';
-    document.getElementById('loginName').required = !isStockman;
+    document.getElementById('loginPinWrap').style.display = isViewer ? 'none' : '';
+    document.getElementById('loginViewerNote').style.display = isViewer ? 'block' : 'none';
+    document.getElementById('loginName').required = !isStockman && !isViewer;
+    document.getElementById('loginPin').required = !isViewer;
   });
 
   document.getElementById('loginForm').addEventListener('submit', function(e){
@@ -1187,7 +1191,10 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
     const errEl = document.getElementById('loginError');
     let name, pinOk;
 
-    if(role === 'stockman'){
+    if(role === 'viewer'){
+      name = 'Viewer';
+      pinOk = true;
+    } else if(role === 'stockman'){
       name = stockmanSelect.value;
       const match = STOCKMAN_USERS.find(u=>u.name===name);
       pinOk = !!match && pin === match.pin;
@@ -1297,6 +1304,17 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
     state.items.push(item);
     this.reset();
     overlay.classList.remove('show');
+
+    if(stock > 0){
+      const tx = {
+        id: uid(), itemId:item.id, itemName:item.name, category:item.category, unit:item.unit,
+        type:'in', qty:stock, ref:'NEW-CUT', reason:'New Cut - Initial Stock', batch:'—',
+        stockman:user, location:'—', loggedInUser:user, note:'Auto-logged from cut creation', ts: Date.now()
+      };
+      state.transactions.unshift(tx);
+      syncAddTransaction(tx, item.stock, user);
+    }
+
     renderAll();
     showToast('in', 'NEW CUT ADDED · '+item.name+' · by '+user);
     syncAddItem(item, user);
