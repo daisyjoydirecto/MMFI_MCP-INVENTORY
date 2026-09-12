@@ -45,7 +45,7 @@ body{
   padding: 22px 16px 60px;
 }
 
-.app{ max-width: 1280px; margin: 0 auto; }
+.app{ max-width: 1760px; margin: 0 auto; }
 
 /* ===== Header / signboard ===== */
 .board{
@@ -126,14 +126,14 @@ body{
 .stats{
   display:grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 12px;
-  margin-bottom: 22px;
+  gap: 8px;
+  margin-bottom: 12px;
 }
 .stat-card{
   background: var(--paper);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: 16px 18px;
+  padding: 8px 12px;
   position: relative;
   box-shadow: var(--shadow);
 }
@@ -144,29 +144,29 @@ body{
   border-radius: var(--radius) 0 0 var(--radius);
 }
 .stat-label{
-  font-size: 11px;
+  font-size: 10px;
   text-transform: uppercase;
-  letter-spacing: 1.4px;
+  letter-spacing: 1.2px;
   color: var(--ink-soft);
-  margin: 0 0 6px;
+  margin: 0 0 3px;
   font-weight: 600;
 }
 .stat-value{
   font-family: var(--font-mono);
-  font-size: 28px;
+  font-size: 18px;
   font-weight: 700;
   line-height: 1;
   color: var(--ink);
 }
-.stat-value small{ font-size: 14px; font-weight:500; color: var(--ink-soft); }
-.stat-sub{ font-size:12px; color: var(--ink-soft); margin-top:6px; }
+.stat-value small{ font-size: 11px; font-weight:500; color: var(--ink-soft); }
+.stat-sub{ font-size:10px; color: var(--ink-soft); margin-top:3px; }
 .stat-card.warn .stat-value{ color: var(--crimson); }
 .stat-card.warn::before{ background: var(--crimson); }
 
 /* ===== Layout ===== */
 .grid-main{
   display:grid;
-  grid-template-columns: 1.6fr 1fr;
+  grid-template-columns: 1.5fr 1fr 1fr;
   gap: 18px;
   align-items:start;
   margin-bottom: 18px;
@@ -231,7 +231,7 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
 /* ===== Tag grid (inventory cards) ===== */
 .tag-grid{
   display:grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 14px;
   max-height: 640px;
   overflow-y: auto;
@@ -448,11 +448,12 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
 .sync-actions button{ flex:1; font-size:11px; padding:7px; }
 
 /* ===== Chart panel ===== */
-.chart-rows{ display:flex; flex-direction:column; gap:10px; }
-.chart-panel{ margin-bottom: 18px; }
+.chart-rows{ display:flex; flex-direction:column; gap:5px; }
+.chart-panel{ margin-bottom: 12px; padding: 10px 16px 12px; }
+.chart-panel h2{ font-size: 16px; margin-bottom: 6px; padding-bottom: 3px; }
 .chart-row{ display:grid; grid-template-columns: 130px 1fr 70px; align-items:center; gap:10px; }
 .chart-row .name{ font-size:13px; font-weight:600; }
-.chart-track{ height: 14px; background: rgba(0,0,0,.06); border-radius:3px; overflow:hidden; }
+.chart-track{ height: 8px; background: rgba(0,0,0,.06); border-radius:3px; overflow:hidden; }
 .chart-bar{ height:100%; width:0%; border-radius:3px; transition: width .8s cubic-bezier(.2,.8,.2,1); }
 .chart-row .val{ font-family: var(--font-mono); font-size:12px; text-align:right; }
 
@@ -499,6 +500,7 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
 @media (max-width: 980px){
   .grid-main{ grid-template-columns: 1fr; }
   .stats{ grid-template-columns: repeat(3, 1fr); }
+  .tag-grid{ grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 640px){
   body{ padding: 14px 10px 40px; }
@@ -567,9 +569,8 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
       <div class="tag-grid" id="tagGrid"></div>
     </section>
 
-    <aside class="side-col">
-      <section class="panel movement-panel" style="margin-bottom:18px;">
-        <h2>Record movement</h2>
+    <section class="panel movement-panel">
+      <h2>Record movement</h2>
         <div class="empty-note" id="moveViewOnly" style="display:none;">You're signed in as a Viewer — recording stock movements requires an Administrator or Stockman role.</div>
         <form id="movementForm">
           <div class="field">
@@ -638,7 +639,6 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
         <div class="sync-status off" id="syncStatus">Auto-syncing every movement to your Google Sheet.</div>
         <div class="ticket-log" id="ticketLog"></div>
       </section>
-    </aside>
   </main>
 </div>
 
