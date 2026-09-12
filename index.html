@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>M. Montesclaros Farms, Inc. — MCP Inventory Ledger</title>
+<title>M. Montesclaros Farms, Inc. — Meat Inventory Ledger</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Work+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
@@ -292,13 +292,31 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
 .tag-remove:hover{ color: var(--crimson); background:none; }
 .tag-remove.confirming{ color:#fff; background:var(--crimson); padding:2px 6px; font-size:11px; }
 
+.tag-stock-label{
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--ink-soft);
+  font-weight: 700;
+  margin-top: 8px;
+}
 .tag-stock{
   font-family: var(--font-mono);
   font-size: 22px;
   font-weight:700;
-  margin: 6px 0 2px;
+  margin: 2px 0 2px;
 }
 .tag-stock small{ font-size:12px; font-weight:500; color: var(--ink-soft); }
+.tag-inout{
+  display: flex;
+  gap: 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  margin: 4px 0 2px;
+}
+.tag-inout .in{ color: var(--sage-deep); }
+.tag-inout .out{ color: var(--crimson-deep); }
 
 .gauge{
   height: 7px; background: rgba(0,0,0,.08); border-radius: 4px; overflow:hidden; margin: 8px 0 6px;
@@ -321,6 +339,39 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
 
 /* ===== Movement panel ===== */
 .type-toggle{ display:flex; gap:8px; margin-bottom: 12px; }
+
+.cart-builder{
+  border: 1px dashed var(--line);
+  border-radius: 3px;
+  padding: 12px;
+  margin: 14px 0 10px;
+  background: #fffdf7;
+}
+.cart-builder-label{
+  font-size: 11px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700;
+  color: var(--ink-soft); margin-bottom: 10px;
+}
+.cart-list{ display:flex; flex-direction:column; gap:8px; margin-bottom: 10px; }
+.cart-item{
+  display:flex; align-items:center; gap:8px;
+  border: 1px solid var(--line); border-radius: 2px; padding: 8px 10px;
+  background: var(--paper-2); font-size: 12.5px;
+}
+.cart-item .cart-dir{
+  flex-shrink:0; width: 30px; height: 22px; border-radius: 2px;
+  display:flex; align-items:center; justify-content:center;
+  font-size: 10px; font-weight: 700; color: #fff;
+}
+.cart-item .cart-dir.in{ background: var(--sage); }
+.cart-item .cart-dir.out{ background: var(--crimson); }
+.cart-item .cart-body{ flex:1; min-width:0; }
+.cart-item .cart-name{ font-weight: 700; }
+.cart-item .cart-meta{ color: var(--ink-soft); font-size: 11px; }
+.cart-item .cart-remove{
+  background:none; border:none; color: var(--ink-soft); font-size: 16px; cursor:pointer; padding: 0 2px; line-height:1;
+}
+.cart-item .cart-remove:hover{ color: var(--crimson); }
+.cart-empty-note{ font-size: 12px; color: var(--ink-soft); padding: 4px 2px; }
 .type-toggle button{
   flex:1; background: transparent; color: var(--ink); border: 1px solid var(--ink-soft);
 }
@@ -521,33 +572,13 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
         <h2>Record movement</h2>
         <div class="empty-note" id="moveViewOnly" style="display:none;">You're signed in as a Viewer — recording stock movements requires an Administrator or Stockman role.</div>
         <form id="movementForm">
-          <div class="type-toggle">
-            <button type="button" class="active" data-type="in">↓ Stock In</button>
-            <button type="button" data-type="out">↑ Stock Out</button>
-          </div>
-          <div class="field">
-            <label for="moveItem">Cut <span style="color:var(--crimson)">*</span></label>
-            <input id="moveItem" type="text" list="cutsList" placeholder="Type to search a cut…" autocomplete="off">
-            <datalist id="cutsList"></datalist>
-          </div>
           <div class="field">
             <label for="moveRef">Reference # <span style="color:var(--crimson)">*</span></label>
-            <input id="moveRef" type="text" placeholder="e.g. Receive Date, DR#0001, INDR#0001" required>
-          </div>
-          <div class="field">
-            <label for="moveQty">Quantity <span style="color:var(--crimson)">*</span></label>
-            <div class="qty-row">
-              <input id="moveQty" type="number" min="0.001" step="0.001" placeholder="0.000">
-              <span class="qty-unit" id="moveUnit">kg</span>
-            </div>
-          </div>
-          <div class="field">
-            <label for="moveReason">Reason <span style="color:var(--crimson)">*</span></label>
-            <select id="moveReason"></select>
+            <input id="moveRef" type="text" placeholder="e.g. PO-1042, INV-338, ticket #12" required>
           </div>
           <div class="field">
             <label for="moveBatch">Batch Code / Production Date <span style="color:var(--crimson)">*</span></label>
-            <input id="moveBatch" type="text" placeholder="e.g. A0126 or 2026-07-31" required>
+            <input id="moveBatch" type="text" placeholder="e.g. BC-0731 or 2026-07-31" required>
           </div>
           <div class="field">
             <label for="moveStockman">Stockman In-charge <span style="color:var(--crimson)">*</span></label>
@@ -555,15 +586,44 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
           </div>
           <div class="field">
             <label for="moveLocation">Location <span style="color:var(--crimson)">*</span></label>
-            <input id="moveLocation" type="text" placeholder="e.g. Freezer 1, Container Van 1, Chiller" required>
+            <input id="moveLocation" type="text" placeholder="e.g. Cold Storage 1, Cutting Room" required>
           </div>
           <div class="field">
             <label for="moveNote">Note (optional)</label>
-            <textarea id="moveNote" placeholder="e.g. Tattoo #, Customer Purchase Order #, and etc…"></textarea>
+            <textarea id="moveNote" placeholder="e.g. supplier, order #, ticket ref…"></textarea>
           </div>
+
+          <div class="cart-builder">
+            <div class="cart-builder-label">Add items to this transaction</div>
+            <div class="type-toggle">
+              <button type="button" class="active" data-type="in">↓ Stock In</button>
+              <button type="button" data-type="out">↑ Stock Out</button>
+            </div>
+            <div class="field">
+              <label for="moveItem">Cut</label>
+              <input id="moveItem" type="text" list="cutsList" placeholder="Type to search a cut…" autocomplete="off">
+              <datalist id="cutsList"></datalist>
+            </div>
+            <div class="field">
+              <label for="moveQty">Quantity</label>
+              <div class="qty-row">
+                <input id="moveQty" type="number" min="0.001" step="0.001" placeholder="0.000">
+                <span class="qty-unit" id="moveUnit">kg</span>
+              </div>
+            </div>
+            <div class="field">
+              <label for="moveReason">Reason</label>
+              <select id="moveReason"></select>
+            </div>
+            <div class="form-error" id="lineError">Enter a valid quantity.</div>
+            <button type="button" class="ghost" id="addToCartBtn" style="width:100%;">+ Add to cart</button>
+          </div>
+
+          <div class="cart-list" id="cartList"></div>
+
           <div class="form-error" id="moveError">Enter a valid quantity.</div>
           <div class="submit-row">
-            <button type="submit">Stamp entry</button>
+            <button type="submit" id="recordAllBtn">Record All (0)</button>
           </div>
         </form>
       </section>
@@ -589,7 +649,7 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
       <input type="hidden" id="editItemId" value="">
       <div class="field">
         <label for="newName">Name</label>
-        <input id="newName" type="text" placeholder="e.g. Shoulder SOBI" required>
+        <input id="newName" type="text" placeholder="e.g. Flank Steak" required>
       </div>
       <div class="field">
         <label for="newCategory">Category</label>
@@ -604,7 +664,7 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
         <label for="newUnit">Unit</label>
         <select id="newUnit">
           <option value="kg">Kilograms (kg)</option>
-          <option value="hds">Heads (hds)</option>
+          <option value="lb">Pounds (lb)</option>
           <option value="pcs">Pieces (pcs)</option>
         </select>
       </div>
@@ -613,7 +673,7 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
         <input id="newStock" type="number" min="0" step="0.001" value="0">
       </div>
       <div class="field">
-        <label for="newReorder">Replenishment level</label>
+        <label for="newReorder">Reorder level</label>
         <input id="newReorder" type="number" min="0" step="0.1" value="5">
       </div>
       <div class="modal-actions">
@@ -627,7 +687,7 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
 <div class="login-gate" id="loginGate">
   <div class="modal login-card">
     <h2>M. Montesclaros Farms, Inc.</h2>
-    <p style="font-size:12px; color:var(--ink-soft); margin:-6px 0 16px; line-height:1.5;">Sign in to access the MMFI-MCP inventory dashboard.</p>
+    <p style="font-size:12px; color:var(--ink-soft); margin:-6px 0 16px; line-height:1.5;">Sign in to access the inventory dashboard.</p>
     <form id="loginForm">
       <div class="field">
         <label for="loginRole">Role <span style="color:var(--crimson)">*</span></label>
@@ -663,15 +723,13 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
 (function(){
   // Sign-in PINs — one per role. Change these to your own PINs.
   const PIN_BY_ROLE = {
-    administrator: '2026',
+    administrator: '1234',
     viewer: '0000'
   };
   // Named stockman accounts — add more entries here for more stockmen.
   const STOCKMAN_USERS = [
-    { name: 'JOBERT JUMAWAN', pin: '0806' },
-    { name: 'EVINE JAKE APEROCHO', pin: '5418' },
-    { name: 'RODOLFO ORONGAN', pin: '8765' },
-    { name: 'DAISY JOY DIRECTO', pin: '2026' },
+    { name: 'Juan Dela Cruz', pin: '5678' },
+    { name: 'Maria Santos', pin: '8765' }
   ];
 
   // Google Sheet database config — see the sync section further down for the Apps Script.
@@ -699,7 +757,7 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
   // ===== helpers =====
   function weightKg(item){
     if(item.unit==='kg') return item.stock;
-    if(item.unit==='hds') return item.stock*0.453592;
+    if(item.unit==='lb') return item.stock*0.453592;
     return 0;
   }
   function status(item){
@@ -712,6 +770,16 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
     return Math.min(100, (item.stock/max)*100);
   }
   function fmt(n, d){ return Number(n).toLocaleString(undefined,{minimumFractionDigits:d||0, maximumFractionDigits:d||1}); }
+  function itemTotals(itemId){
+    let totalIn = 0, totalOut = 0;
+    state.transactions.forEach(t=>{
+      if(t.itemId===itemId){
+        if(t.type==='in') totalIn += t.qty;
+        else totalOut += t.qty;
+      }
+    });
+    return { totalIn, totalOut };
+  }
   function timeAgo(ts){
     const mins = Math.round((Date.now()-ts)/60000);
     if(mins < 1) return 'just now';
@@ -723,7 +791,7 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
   }
 
   // ===== render: stats =====
-  function txKg(t){ return t.unit==='pcs' ? 0 : t.unit==='hds' ? t.qty*0.453592 : t.qty; }
+  function txKg(t){ return t.unit==='pcs' ? 0 : t.unit==='lb' ? t.qty*0.453592 : t.qty; }
 
   function renderStats(){
     const totalKg = state.items.reduce((s,i)=>s+weightKg(i),0);
@@ -785,6 +853,7 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
       const st = status(item);
       const pct = gaugePct(item);
       const confirming = removeConfirmId===item.id;
+      const { totalIn, totalOut } = itemTotals(item.id);
       return `
       <div class="tag-card" data-id="${item.id}">
         <div class="tag-hole"></div>
@@ -799,7 +868,12 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
             <button class="tag-remove ${confirming?'confirming':''}" data-remove="${item.id}">${confirming? 'confirm?':'✕'}</button>
           </div>` : ''}
         </div>
+        <div class="tag-stock-label">Ending Stock</div>
         <div class="tag-stock">${fmt(item.stock,3)} <small>${item.unit}</small></div>
+        <div class="tag-inout">
+          <span class="in">▲ In ${fmt(totalIn,3)}</span>
+          <span class="out">▼ Out ${fmt(totalOut,3)}</span>
+        </div>
         <div class="gauge"><div class="gauge-fill ${st}" style="width:${pct}%"></div></div>
         <div class="tag-foot">
           <span>Reorder at ${fmt(item.reorder,3)} ${item.unit}</span>
@@ -896,41 +970,96 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
 
   document.getElementById('moveItem').addEventListener('input', updateMoveUnit);
 
-  // ===== events: movement submit =====
+  // ===== cart: queue multiple in/out lines before recording them together =====
+  let cart = [];
+
+  function effectiveStock(itemId){
+    const item = state.items.find(i=>i.id===itemId);
+    if(!item) return 0;
+    let stock = item.stock;
+    cart.forEach(line=>{
+      if(line.itemId===itemId) stock += (line.type==='in' ? line.qty : -line.qty);
+    });
+    return stock;
+  }
+
+  function renderCart(){
+    const list = document.getElementById('cartList');
+    const btn = document.getElementById('recordAllBtn');
+    btn.textContent = 'Record All (' + cart.length + ')';
+    if(cart.length===0){
+      list.innerHTML = `<div class="cart-empty-note">No items added yet — add at least one cut above.</div>`;
+      return;
+    }
+    list.innerHTML = cart.map(line=>`
+      <div class="cart-item">
+        <div class="cart-dir ${line.type}">${line.type==='in'?'IN':'OUT'}</div>
+        <div class="cart-body">
+          <div class="cart-name">${line.itemName}</div>
+          <div class="cart-meta">${fmt(line.qty,3)} ${line.unit} · ${line.reason}</div>
+        </div>
+        <button type="button" class="cart-remove" data-cart-remove="${line.tempId}">✕</button>
+      </div>
+    `).join('');
+  }
+
+  document.getElementById('addToCartBtn').addEventListener('click', ()=>{
+    const itemText = document.getElementById('moveItem').value;
+    const qty = parseFloat(document.getElementById('moveQty').value);
+    const reason = document.getElementById('moveReason').value;
+    const lineErr = document.getElementById('lineError');
+    const item = findItemByTypedName(itemText);
+
+    if(!item){
+      lineErr.textContent = 'Select a valid cut from the search results.';
+      lineErr.classList.add('show');
+      document.getElementById('moveItem').focus();
+      return;
+    }
+    if(!qty || qty<=0){
+      lineErr.textContent = 'Enter a valid quantity.';
+      lineErr.classList.add('show');
+      return;
+    }
+    if(currentType==='out' && qty > effectiveStock(item.id)){
+      lineErr.textContent = `Only ${fmt(effectiveStock(item.id),3)} ${item.unit} available (after items already in cart).`;
+      lineErr.classList.add('show');
+      return;
+    }
+    lineErr.classList.remove('show');
+
+    cart.push({
+      tempId: uid(), itemId: item.id, itemName: item.name, category: item.category, unit: item.unit,
+      type: currentType, qty, reason
+    });
+    document.getElementById('moveQty').value = '';
+    document.getElementById('moveItem').value = '';
+    updateMoveUnit();
+    renderCart();
+  });
+
+  document.getElementById('cartList').addEventListener('click', (e)=>{
+    const btn = e.target.closest('[data-cart-remove]');
+    if(!btn) return;
+    cart = cart.filter(l=>l.tempId!==btn.dataset.cartRemove);
+    renderCart();
+  });
+
+  // ===== events: movement submit (records every line in the cart together) =====
   document.getElementById('movementForm').addEventListener('submit', function(e){
     e.preventDefault();
     if(!canEdit()) return; // safety net — form is hidden for view-only roles anyway
-    const itemText = document.getElementById('moveItem').value;
-    const qty = parseFloat(document.getElementById('moveQty').value);
     const ref = document.getElementById('moveRef').value.trim();
-    const reason = document.getElementById('moveReason').value;
     const batch = document.getElementById('moveBatch').value.trim();
     const stockman = document.getElementById('moveStockman').value.trim();
     const location = document.getElementById('moveLocation').value.trim();
     const note = document.getElementById('moveNote').value.trim();
     const errEl = document.getElementById('moveError');
-    const item = findItemByTypedName(itemText);
 
-    if(!item){
-      errEl.textContent = 'Select a valid cut from the search results.';
-      errEl.classList.add('show');
-      document.getElementById('moveItem').focus();
-      return;
-    }
     if(!ref){
       errEl.textContent = 'Reference # is required.';
       errEl.classList.add('show');
       document.getElementById('moveRef').focus();
-      return;
-    }
-    if(!item || !qty || qty<=0){
-      errEl.textContent = 'Enter a valid quantity.';
-      errEl.classList.add('show');
-      return;
-    }
-    if(currentType==='out' && qty>item.stock){
-      errEl.textContent = `Only ${fmt(item.stock,3)} ${item.unit} in stock — can't dispatch that much.`;
-      errEl.classList.add('show');
       return;
     }
     if(!batch){
@@ -951,17 +1080,30 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
       document.getElementById('moveLocation').focus();
       return;
     }
+    if(cart.length===0){
+      errEl.textContent = 'Add at least one cut to the cart before recording.';
+      errEl.classList.add('show');
+      return;
+    }
     errEl.classList.remove('show');
 
     const user = currentUser.name;
-    item.stock = currentType==='in' ? item.stock+qty : item.stock-qty;
-    item.stock = Math.round(item.stock*1000)/1000;
+    const touchedItemIds = [];
 
-    const tx = { id: uid(), itemId:item.id, itemName:item.name, category:item.category, unit:item.unit, type:currentType, qty, ref, reason, batch, stockman, location, loggedInUser:user, note, ts: Date.now() };
-    state.transactions.unshift(tx);
-    syncAddTransaction(tx, item.stock, user);
+    cart.forEach(line=>{
+      const item = state.items.find(i=>i.id===line.itemId);
+      if(!item) return;
+      item.stock = line.type==='in' ? item.stock+line.qty : item.stock-line.qty;
+      item.stock = Math.round(item.stock*1000)/1000;
+      touchedItemIds.push(item.id);
 
-    document.getElementById('moveQty').value='';
+      const tx = { id: uid(), itemId:item.id, itemName:item.name, category:item.category, unit:item.unit, type:line.type, qty:line.qty, ref, reason:line.reason, batch, stockman, location, loggedInUser:user, note, ts: Date.now() };
+      state.transactions.unshift(tx);
+      syncAddTransaction(tx, item.stock, user);
+    });
+
+    const cartCount = cart.length;
+    cart = [];
     document.getElementById('moveRef').value='';
     document.getElementById('moveBatch').value='';
     document.getElementById('moveStockman').value='';
@@ -969,10 +1111,12 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
     document.getElementById('moveNote').value='';
 
     renderAll();
-    showToast(currentType, (currentType==='in'?'RECEIVED · ':'DISPATCHED · ')+item.name+' '+(currentType==='in'?'+':'-')+fmt(qty,3)+' '+item.unit+' · confirmed by '+user);
+    showToast('in', 'RECORDED ' + cartCount + ' item' + (cartCount>1?'s':'') + ' · confirmed by ' + user);
 
-    const card = document.querySelector(`.tag-card[data-id="${item.id}"]`);
-    if(card){ card.classList.add('flash'); setTimeout(()=>card.classList.remove('flash'), 900); }
+    touchedItemIds.forEach(id=>{
+      const card = document.querySelector(`.tag-card[data-id="${id}"]`);
+      if(card){ card.classList.add('flash'); setTimeout(()=>card.classList.remove('flash'), 900); }
+    });
   });
 
   // ===== events: search / filter / sort =====
@@ -1403,6 +1547,7 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
   updateSignedInBadge();
   setTimeout(()=>document.getElementById('loginName').focus(), 100);
 
+  renderCart();
   renderAll();
 })();
 </script>
