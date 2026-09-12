@@ -168,7 +168,7 @@ body{
   display:grid;
   grid-template-columns: 1.5fr 1fr 1fr;
   gap: 18px;
-  align-items:start;
+  align-items:stretch;
   margin-bottom: 18px;
 }
 .panel{
@@ -229,11 +229,22 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
 .controls select{ flex: 0 0 auto; }
 
 /* ===== Tag grid (inventory cards) ===== */
+.inventory-panel, .movement-panel, .log-panel{
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.movement-panel form{
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
 .tag-grid{
   display:grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 14px;
-  max-height: 640px;
+  flex: 1;
+  min-height: 200px;
   overflow-y: auto;
   padding-right: 6px;
   padding-top: 10px; /* room for the hanging-tag hole so it isn't clipped */
@@ -351,7 +362,7 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
   font-size: 11px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700;
   color: var(--ink-soft); margin-bottom: 10px;
 }
-.cart-list{ display:flex; flex-direction:column; gap:8px; margin-bottom: 10px; }
+.cart-list{ display:flex; flex-direction:column; gap:8px; margin-bottom: 10px; flex: 1; overflow-y:auto; min-height: 40px; }
 .cart-item{
   display:flex; align-items:center; gap:8px;
   border: 1px solid var(--line); border-radius: 2px; padding: 8px 10px;
@@ -391,7 +402,7 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
 .submit-row button{ width:100%; }
 
 /* ===== Activity ticket log ===== */
-.ticket-log{ max-height: 360px; overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding-right:2px;}
+.ticket-log{ flex: 1; min-height: 150px; overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding-right:2px;}
 .ticket{
   border: 1px dashed var(--line);
   border-radius: 2px;
@@ -692,7 +703,7 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
       <div class="field">
         <label for="loginRole">Role <span style="color:var(--crimson)">*</span></label>
         <select id="loginRole">
-          <option value="administrator">Administrator</option>
+          <option value="istrator">istrator</option>
           <option value="stockman">Stockman</option>
           <option value="viewer">Viewer (view only)</option>
         </select>
@@ -724,7 +735,7 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
 (function(){
   // Sign-in PINs — one per role. Change these to your own PINs.
   const PIN_BY_ROLE = {
-    administrator: '1234'
+    administrator: '2026'
   };
   // Named stockman accounts — add more entries here for more stockmen.
   const STOCKMAN_USERS = [
