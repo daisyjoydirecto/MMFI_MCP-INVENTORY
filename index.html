@@ -242,9 +242,10 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
 .tag-grid{
   display:grid;
   grid-template-columns: repeat(3, 1fr);
+  grid-auto-rows: minmax(170px, auto);
   gap: 14px;
-  flex: 1;
-  min-height: 200px;
+  flex: 0 0 auto;
+  height: calc(170px * 5 + 14px * 4 + 10px); /* 5 card rows + gaps + top padding */
   overflow-y: auto;
   padding-right: 6px;
   padding-top: 10px; /* room for the hanging-tag hole so it isn't clipped */
@@ -255,6 +256,9 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
   border: 1px solid var(--line);
   border-radius: 2px;
   padding: 14px 14px 12px;
+  min-height: 170px;
+  display: flex;
+  flex-direction: column;
   transition: transform .15s ease, box-shadow .15s ease;
 }
 .tag-card:hover{ transform: translateY(-2px); box-shadow: 0 8px 18px rgba(0,0,0,.18); }
@@ -703,7 +707,7 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
       <div class="field">
         <label for="loginRole">Role <span style="color:var(--crimson)">*</span></label>
         <select id="loginRole">
-          <option value="istrator">istrator</option>
+          <option value="administrator">Administrator</option>
           <option value="stockman">Stockman</option>
           <option value="viewer">Viewer (view only)</option>
         </select>
