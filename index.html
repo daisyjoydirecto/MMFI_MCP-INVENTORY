@@ -1523,14 +1523,17 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
 
   // ----- read: pull items + transactions from the sheet -----
   let firstLoadDone = false;
+  let loadRequestId = 0; // only the response from the most recently fired request is applied
   function loadFromSheet(){
     if(!sheetConfigured()){
       setSyncStatus('Google Sheet database not connected — add the Web App URL in the code (showing local demo data).', false);
       return;
     }
+    const requestId = ++loadRequestId;
     fetch(WEBAPP_URL + '?action=getAll', { method:'GET' })
       .then(r=>r.json())
       .then(data=>{
+        if(requestId !== loadRequestId) return; // a newer refresh has already started — discard this stale one
         if(data && data.status==='ok'){
           state.items = (data.items||[]).map(i=>({
             id: String(i.id), name: i.name, category: i.category, unit: i.unit,
@@ -1552,6 +1555,7 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
         firstLoadDone = true;
       })
       .catch(()=>{
+        if(requestId !== loadRequestId) return; // a newer refresh has already started — discard this stale one
         loading = false;
         renderAll();
         setSyncStatus('Could not reach the Google Sheet — check the deployment URL and access settings.', false);
