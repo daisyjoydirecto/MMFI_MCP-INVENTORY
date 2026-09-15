@@ -561,7 +561,7 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
   </section>
 
   <main class="grid-main">
-    <section class="panel inventory-panel">
+    <section class="panel inventory-panel" id="inventoryPanel">
       <div class="panel-head">
         <h2>Inventory</h2>
         <button id="openAddItem">+ New cut</button>
@@ -584,7 +584,7 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
       <div class="tag-grid" id="tagGrid"></div>
     </section>
 
-    <section class="panel movement-panel">
+    <section class="panel movement-panel" id="movementPanelSection">
       <h2>Record movement</h2>
         <div class="empty-note" id="moveViewOnly" style="display:none;">You're signed in as a Viewer — recording stock movements requires an Administrator or Stockman role.</div>
         <form id="movementForm">
@@ -644,7 +644,7 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
         </form>
       </section>
 
-      <section class="panel log-panel">
+      <section class="panel log-panel" id="logPanelSection">
         <div class="panel-head">
           <h2>Activity</h2>
           <div class="log-actions">
@@ -743,7 +743,7 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
   };
   // Named stockman accounts — add more entries here for more stockmen.
   const STOCKMAN_USERS = [
-    { name: 'JOBERT JUMAWAN', pin: '0806' },
+   { name: 'JOBERT JUMAWAN', pin: '0806' },
     { name: 'EVINE JAKE APEROCHO', pin: '5418' },
     { name: 'RODOLFO ORONGAN JR.', pin: '5678' },
     { name: 'DAISY JOY DIRECTO', pin: '2026' }
@@ -1164,6 +1164,7 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
 
   function applyRolePermissions(){
     const editAllowed = canEdit();
+    const isViewer = currentUser.role === 'viewer';
     document.getElementById('openAddItem').style.display = editAllowed ? '' : 'none';
     const moveForm = document.getElementById('movementForm');
     const moveViewOnly = document.getElementById('moveViewOnly');
@@ -1174,6 +1175,12 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
       moveForm.style.display = 'none';
       moveViewOnly.style.display = 'block';
     }
+
+    // Viewers only see the Inventory panel — Record Movement and Activity are hidden entirely.
+    document.getElementById('movementPanelSection').style.display = isViewer ? 'none' : '';
+    document.getElementById('logPanelSection').style.display = isViewer ? 'none' : '';
+    document.getElementById('inventoryPanel').style.gridColumn = isViewer ? '1 / -1' : '';
+
     renderTagGrid(); // edit/delete buttons on cards are only added when canEdit() is true
   }
 
