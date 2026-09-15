@@ -739,7 +739,7 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
 (function(){
   // Sign-in PINs — one per role. Change these to your own PINs.
   const PIN_BY_ROLE = {
-    administrator: '2026'
+    administrator: '1234'
   };
   // Named stockman accounts — add more entries here for more stockmen.
   const STOCKMAN_USERS = [
@@ -1320,19 +1320,19 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
     this.reset();
     overlay.classList.remove('show');
 
+    let tx = null;
     if(stock > 0){
-      const tx = {
+      tx = {
         id: uid(), itemId:item.id, itemName:item.name, category:item.category, unit:item.unit,
         type:'in', qty:stock, ref:'NEW-CUT', reason:'New Cut - Initial Stock', batch:'—',
         stockman:user, location:'—', loggedInUser:user, note:'Auto-logged from cut creation', ts: Date.now()
       };
       state.transactions.unshift(tx);
-      syncAddTransaction(tx, item.stock, user);
     }
 
     renderAll();
     showToast('in', 'NEW CUT ADDED · '+item.name+' · by '+user);
-    syncAddItem(item, user);
+    syncAddItemWithStock(item, tx, user);
   });
 
   // ===== CSV export =====
@@ -1460,16 +1460,28 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
 
   function doPost(e){
     var body = JSON.parse(e.postData.contents);
-    if (body.action === 'addItem')        return addItem(body.item, body.user);
-    if (body.action === 'updateItem')     return updateItem(body.item, body.user);
-    if (body.action === 'deleteItem')     return deleteItem(body.id, body.user, body.itemName);
-    if (body.action === 'addTransaction') return addTransaction(body.tx, body.newStock, body.user);
+    if (body.action === 'addItem')          return addItem(body.item, body.user);
+    if (body.action === 'addItemWithStock') return addItemWithStock(body.item, body.tx, body.user);
+    if (body.action === 'updateItem')       return updateItem(body.item, body.user);
+    if (body.action === 'deleteItem')       return deleteItem(body.id, body.user, body.itemName);
+    if (body.action === 'addTransaction')   return addTransaction(body.tx, body.newStock, body.user);
     return out({ status:'error', message:'Unknown action' });
   }
 
   function addItem(item, user){
     itemsSheet().appendRow([item.id, item.name, item.category, item.unit, item.stock, item.reorder]);
     logAudit(user, 'Add Cut', item.name, 'Category: '+item.category+', Starting stock: '+item.stock+' '+item.unit+', Reorder: '+item.reorder);
+    return out({ status:'ok' });
+  }
+  function addItemWithStock(item, tx, user){
+    // Writes the new item AND its initial-stock transaction in a single request,
+    // so there's no window where one exists in the sheet and the other doesn't.
+    itemsSheet().appendRow([item.id, item.name, item.category, item.unit, item.stock, item.reorder]);
+    logAudit(user, 'Add Cut', item.name, 'Category: '+item.category+', Starting stock: '+item.stock+' '+item.unit+', Reorder: '+item.reorder);
+    if (tx){
+      activitySheet().appendRow([tx.id, new Date(tx.ts), tx.ref, tx.itemId, tx.itemName, tx.category, tx.type, tx.qty, tx.unit, tx.reason, tx.batch, tx.stockman, tx.note || '', tx.location || '', user || '']);
+      logAudit(user, 'Stock In', tx.itemName, tx.qty + ' ' + tx.unit + ' · ' + tx.reason + ' (auto-logged from cut creation)');
+    }
     return out({ status:'ok' });
   }
   function updateItem(item, user){
@@ -1559,6 +1571,7 @@ button.ghost:hover{ background: rgba(0,0,0,.05); }
   }
 
   function syncAddItem(item, user){ sheetPost({ action:'addItem', item, user }); }
+  function syncAddItemWithStock(item, tx, user){ sheetPost({ action:'addItemWithStock', item, tx, user }); }
   function syncUpdateItem(item, user){ sheetPost({ action:'updateItem', item, user }); }
   function syncDeleteItem(id, user, itemName){ sheetPost({ action:'deleteItem', id, user, itemName }); }
   function syncAddTransaction(tx, newStock, user){ sheetPost({ action:'addTransaction', tx, newStock, user }); }
